@@ -10,12 +10,14 @@
     <link rel="stylesheet" href="@Assets["SklepHkr2025.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <RadzenTheme Theme="software" />
     <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
     <Routes @rendermode="PageRenderMode" />
     <script src="_framework/blazor.web.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
 </body>
 
 </html>
@@ -26,4 +28,8 @@
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+    // private IComponentRenderMode? PageRenderMode => HttpContext.Request.Path.StartsWithSegments("/Account")
+    // ? null
+    // : InteractiveServer;
+
 }

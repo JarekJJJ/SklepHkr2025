@@ -1,11 +1,14 @@
-﻿@page "/Account/Register"
-
+﻿@* @page "/Account/Register"
+ *@
 @using System.ComponentModel.DataAnnotations
 @using System.Text
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using SklepHkr2025.Data
+@using System.Text.Json
+@using SklepHkr2025.Services
+@using SklepHkr2025.Model.Auth
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -14,59 +17,107 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-
-<PageTitle>Register</PageTitle>
-
-<h1>Register</h1>
-
-<div class="row">
-    <div class="col-lg-6">
-        <StatusMessage Message="@Message" />
-        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
-            <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="Input.Password">Password</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="Input.ConfirmPassword">Confirm Password</label>
-                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
-    </div>
-</div>
+@inject IConfiguration _configuration
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+<RadzenCard Variant="Variant.Flat" class="rz-my-12 rz-mx-auto" Style="max-width: 200px; max-height:200px;">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" Gap="1rem" class="rz-p-4">
+        <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Medium">
+            <Template>Wait</Template>
+        </RadzenProgressBarCircular>
+    </RadzenStack>
+</RadzenCard>
 
 @code {
     private IEnumerable<IdentityError>? identityErrors;
-
+    [Parameter]
+    public RegisterInputVm InputVm { get; set; } = new();
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+    private bool veryfiOk = true;
+
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-    public async Task RegisterUser(EditContext editContext)
+    protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrEmpty(InputVm.Email))
+        {
+            Input.Email = InputVm.Email;
+        }
+        else
+        {
+            veryfiOk = false;
+            DialogService.Close(false);
+        }
+        if (!string.IsNullOrEmpty(InputVm.Password))
+        {
+            Input.Password = InputVm.Password;
+        }
+        else{
+            veryfiOk = false;
+            DialogService.Close(false);
+        }
+        if (!string.IsNullOrEmpty(InputVm.ConfirmPassword))
+        {
+            Input.ConfirmPassword = InputVm.ConfirmPassword;
+        }
+        else
+        {
+            veryfiOk = false;
+            DialogService.Close(false);
+        }
+        await Task.Delay(3000);
+        //DialogService.Close();
+        await RegisterUser();
+
+
+
+    }
+    public async Task RegisterUser()
+    {
+        if (!InputVm.RecaptchaOk)
+        {
+            NotificationService.Notify(new NotificationMessage()
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "ReCaptcha",
+                    Detail = "Błąd weryfikacji!",
+                    Duration = 5000
+                });
+            DialogService.Close(false);
+            
+        }
+        var context = new ValidationContext(Input);
+        var results = new List<ValidationResult>();
+        bool isValid = Validator.TryValidateObject(Input, context, results, true);
+
+        if (!isValid)
+        {
+            // results zawiera listę błędów walidacji
+            foreach (var error in results)
+            {
+                // Możesz np. wyświetlić powiadomienie lub zebrać błędy do wyświetlenia
+                NotificationService.Notify(new NotificationMessage()
+                    {
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Błąd walidacji",
+                        Detail = error.ErrorMessage,
+                        Duration = 5000
+                    });
+            }
+            veryfiOk = false;
+            DialogService.Close();
+        }
+        if (!veryfiOk)
+        {
+            return;
+            DialogService.Close();
+        }
+
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
@@ -93,13 +144,18 @@
 
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
-            RedirectManager.RedirectTo(
-                "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            var returnConfirmation = NavigationManager.GetUriWithQueryParameters(
+                NavigationManager.ToAbsoluteUri("Account/RegisterConfirmation").AbsoluteUri,
+                new Dictionary<string, object?> { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            DialogService.Close(returnConfirmation);
+            // RedirectManager.RedirectTo(
+            //     "Account/RegisterConfirmation",
+            //     new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
         }
-
         await SignInManager.SignInAsync(user, isPersistent: false);
+        DialogService.Close();
         RedirectManager.RedirectTo(ReturnUrl);
+
     }
 
     private ApplicationUser CreateUser()
@@ -112,6 +168,7 @@
         {
             throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
                 $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+            DialogService.Close(false);
         }
     }
 
@@ -120,9 +177,11 @@
         if (!UserManager.SupportsUserEmail)
         {
             throw new NotSupportedException("The default UI requires a user store with email support.");
+            DialogService.Close(false);
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }
+   
 
     private sealed class InputModel
     {

@@ -10,9 +10,65 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Zaloguj się</PageTitle>
 
-<h1>Log in</h1>
+<RadzenCard class="rz-my-12 rz-mx-auto" Style="max-width: 420px">
+    @*    <RadzenTemplateForm TItem="InputModel" Data="@Input" Method="post" Submit=@LoginUser InvalidSubmit=@OnInvalidSubmit> *@
+    <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+        <DataAnnotationsValidator />
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" Gap="1rem" class="rz-p-4">
+            <RadzenStack Gap="0">
+                <h1>Logowanie</h1>
+            </RadzenStack>
+        </RadzenStack>
+        <RadzenCard class="rz-background-color-primary-light rz-shadow-0 rz-border-radius-0 rz-p-8" style="margin: 1rem calc(-1 * var(--rz-card-padding));">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-color-on-primary-light"><h2>Zaloguj się.</h2></RadzenText>
+            <RadzenRow RowGap="0">
+                <RadzenColumn Size="12">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <div class="form-floating mb-3">
+                        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                        <label for="Input.Email">Email</label>
+                        <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+                </RadzenColumn>
+                <RadzenColumn Size="12">
+                    <div class="form-floating mb-3">
+                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                        <label for="Input.Password">Password</label>
+                        <ValidationMessage For="() => Input.Password" class="text-danger" />
+                    </div>                  
+                </RadzenColumn>
+                <RadzenColumn Size="12">
+                    <label class="form-label">
+                        Zapamiętaj mnie ? 
+                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input mx-1" />
+                    </label>
+                </RadzenColumn>
+
+            </RadzenRow>
+        </RadzenCard>
+            <div>
+                <p>
+                    <a href="Account/ForgotPassword">Odzyskaj hasło.</a>
+                </p>
+                <p>
+                    <a href="@(NavigationManager.GetUriWithQueryParameters("Auth/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Zarejestruj się.</a>
+                </p>
+                <p>
+                    <a href="Account/ResendEmailConfirmation">Wyślij ponownie link aktywacyjny.</a>
+                </p>
+            </div>
+   
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0">           
+            <RadzenButton Variant="Variant.Text" ButtonType="ButtonType.Submit" Text="Zaloguj się" />
+        </RadzenStack>
+    </EditForm>
+    @*     </RadzenTemplateForm> *@
+</RadzenCard>
+
+@* <h1>Log in</h1>
 <div class="row">
     <div class="col-lg-6">
         <section>
@@ -63,7 +119,7 @@
         </section>
     </div>
 </div>
-
+ *@
 @code {
     private string? errorMessage;
 
@@ -111,7 +167,14 @@
             errorMessage = "Error: Invalid login attempt.";
         }
     }
-
+    private void OnInvalidSubmit()
+    {
+        errorMessage = "Error: Invalid login attempt.";
+    }
+    private void CancelLogin()
+    {
+        RedirectManager.RedirectTo(ReturnUrl);
+    }
     private sealed class InputModel
     {
         [Required]

@@ -1,0 +1,160 @@
+﻿@page "/auth/register"
+@using SklepHkr2025.Model.Auth
+@using System.Text.Json
+@using SklepHkr2025.Components.Account.Pages
+@inject NotificationService NotificationService
+@inject DialogService dialogService
+@inject IJSRuntime JSRuntime
+@inject IConfiguration _configuration
+@inject NavigationManager NavigationManager
+<h3>RegisterDialogComponent</h3>
+
+<HeadContent>
+    <script src="https://www.google.com/recaptcha/api.js?render=6Lfr6TcrAAAAADv9b32CBNySYTa361iHSDWdjG2K"></script>
+</HeadContent>
+<PageTitle>Rejestracja</PageTitle>
+<RadzenCard class="rz-my-12 rz-mx-auto" Style="max-width: 420px">
+    <RadzenTemplateForm TItem="RegisterInputVm" Data="@Input" Submit=@OnSubmit InvalidSubmit=@OnInvalidSubmit>
+        <DataAnnotationsValidator />
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" Gap="1rem" class="rz-p-4">
+            <RadzenStack Gap="0">
+                <h1>Rejestracja</h1>
+            </RadzenStack>
+        </RadzenStack>
+        <RadzenCard class="rz-background-color-primary-light rz-shadow-0 rz-border-radius-0 rz-p-8" style="margin: 1rem calc(-1 * var(--rz-card-padding));">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-color-on-primary-light"><h2>Utwórz nowe konto.</h2></RadzenText>
+            <RadzenRow RowGap="0">
+                <RadzenColumn Size="12">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <div class="form-floating mb-3">
+                        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                        <label for="Input.Email">Email</label>
+                        <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+                </RadzenColumn>
+                <RadzenColumn Size="12">
+                    <div class="form-floating mb-3">
+                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                        <label for="Input.Password">Password</label>
+                        <ValidationMessage For="() => Input.Password" class="text-danger" />
+                    </div>
+                    <div class="form-floating mb-3">
+                        <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                        <label for="Input.ConfirmPassword">Confirm Password</label>
+                        <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                    </div>
+                    <input type="hidden" id="recaptchaToken" name="recaptchaToken" />
+                </RadzenColumn>
+                <RadzenColumn SizeSM="8">
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0">
+            @if (_buttonDisabled == false)
+            {
+                <RadzenButton Variant="Variant.Text" class="rz-text-secondary-color" Text="Cancel" />
+                <RadzenButton Variant="Variant.Text" ButtonType="ButtonType.Submit" Text="Zarejestruj" />
+            }
+            @if (_isLoading)
+            {
+
+                <RadzenButton Icon="" Disabled=@_buttonDisabled ButtonType="ButtonType.Button" Style="">
+                    <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small">
+                        <Template>Czekaj</Template>
+                    </RadzenProgressBarCircular>
+                </RadzenButton>
+            }
+        </RadzenStack>
+    </RadzenTemplateForm>
+</RadzenCard>
+
+@code {
+
+    RegisterInputVm Input = new RegisterInputVm();
+    public bool _buttonDisabled = false; // Przycisk submit jest domyślnie aktywny
+    public bool _isLoading = false;
+    private string? secretKey { get; set; }
+    public string? RecaptchaToken { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        secretKey = _configuration["GoogleReCaptcha:SecretKey"];
+
+    }
+
+    async Task OnSubmit()
+    {
+        _buttonDisabled = true; // Zablokuj przycisk submit
+        _isLoading = true; // Ustaw loading na true
+        RecaptchaToken = await JSRuntime.InvokeAsync<string>("grecaptcha.execute", "6Lfr6TcrAAAAADv9b32CBNySYTa361iHSDWdjG2K", new { action = "submit" });
+
+        if (string.IsNullOrEmpty(RecaptchaToken) || !await VerifyRecaptchaToken(RecaptchaToken))
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error", "Nie udało się zweryfikować tokenu reCAPTCHA!");
+            _buttonDisabled = false;
+            _isLoading = false;
+            return;
+        }
+        else
+        {
+            Input.RecaptchaOk = true;
+            DialogOptions options = new DialogOptions()
+                {
+                    CloseDialogOnOverlayClick = false,
+                    CloseDialogOnEsc = false,
+                    ShowClose = false,
+                    ShowTitle = false
+                };
+            var parameters = new Dictionary<string, object>() { { "InputVm", Input } };
+          var result =  await dialogService.OpenAsync<Register>("Rejestracja", parameters, options);
+            if (result is string url && !string.IsNullOrEmpty(url))
+            {
+                NavigationManager.NavigateTo(url ,forceLoad: true);
+            }
+
+           // NotificationService.Notify(NotificationSeverity.Success, "Success", "Token reCAPTCHA zweryfikowany pomyślnie!");
+            
+        }
+    }
+    void OnInvalidSubmit(FormInvalidSubmitEventArgs args)
+    {
+        NotificationService.Notify(NotificationSeverity.Error, "Error", "Błędne dane w formularzu!");
+    }
+    private async Task<bool> VerifyRecaptchaToken(string token)
+    {
+        using var client = new HttpClient();
+        var response = await client.PostAsync($"https://www.google.com/recaptcha/api/siteverify?secret={secretKey}&response={token}", null);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine($"Błąd HTTP: {response.StatusCode}");
+            return false;
+        }
+
+        var json = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            Console.WriteLine("Odpowiedź API jest pusta.");
+            return false;
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<RecaptchaResponse>(json);
+            return result?.success ?? false;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Błąd deserializacji JSON: {ex.Message}");
+            return false;
+        }
+    }
+    private class RecaptchaResponse
+    {
+        public bool success { get; set; }
+        public string challenge_ts { get; set; } // timestamp in ISO format
+        public string hostname { get; set; }
+        public float score { get; set; }
+        public string action { get; set; }
+    }
+}

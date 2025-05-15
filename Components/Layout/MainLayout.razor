@@ -1,23 +1,67 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+<RadzenComponents />
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+<RadzenLayout>
+    <RadzenHeader>
+        <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Style="">
+            <RadzenColumn Size="12" SizeMD="2">
+                <RadzenStack AlignItems="AlignItems.Center" class="rz-mx-auto rz-my-1">
+                    <RadzenImage Path="images/hkr24.png" Style="width: 10rem;" AlternateText="url image" />
+                </RadzenStack>
+            </RadzenColumn>           
+            <RadzenColumn Size="10" SizeMD="9">
+                <TopMenu />
+            </RadzenColumn>
+            <RadzenColumn Size="2" SizeMD="1">
+                <RadzenProfileMenu>
+                    <Template>
+                        <RadzenIcon Icon="account_circle" Size="32px" />
+                    </Template>
+                    <ChildContent>
+                        <AuthorizeView>
+                            <NotAuthorized>
+                        <RadzenProfileMenuItem Text="Register" Path="Auth/Register" Icon="person_add"></RadzenProfileMenuItem>
+                        <RadzenProfileMenuItem Text="Zaloguj się" Path="Account/Login" Icon="line_weight"></RadzenProfileMenuItem>
+                     </NotAuthorized>
+            <Authorized>
+         
+                                <form action="Account/Logout" method="post">
+                                    <AntiforgeryToken />
+                                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                    <RadzenButton Icon="logout" Text="Wyloguj się" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" ButtonType="ButtonType.Submit" Style="width: 100%;" />
+                                </form>
+                            </Authorized>
+                        </AuthorizeView>
+                    </ChildContent>
+                </RadzenProfileMenu>
+            </RadzenColumn>
+             </RadzenRow>
+    </RadzenHeader>
+    <RadzenBody>
+        <div class="rz-p-4">
             @Body
-        </article>
-    </main>
-</div>
+        </div>
+    </RadzenBody>
+<RadzenFooter>
+    <p>HKR Software @DateTime.Now.ToString("yyyy") ver. 1.04</p>
+</RadzenFooter>
+</RadzenLayout>
+@code
+{
+    private string? currentUrl;
+    bool sidebar1Expanded = true;
+    private string userRole = "Brak";
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // Pobierz pierwszą rolę użytkownika (jeśli ma przypisane role)
+            userRole = user.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Brak roli";
+        }
+    }
+
+}
