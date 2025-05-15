@@ -9,9 +9,31 @@
                 <RadzenStack AlignItems="AlignItems.Center" class="rz-mx-auto rz-my-1">
                     <RadzenImage Path="images/hkr24.png" Style="width: 10rem;" AlternateText="url image" />
                 </RadzenStack>
-            </RadzenColumn>           
+            </RadzenColumn>
             <RadzenColumn Size="10" SizeMD="9">
-                <TopMenu />
+                <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
+                    <RadzenColumn Size="0" SizeMD="3">
+
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeMD="6">
+                        <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal">
+
+                            <RadzenCard class="rz-border rz-border-color-dark rz-border-radius-5  rz-p-1 rz-shadow-0 " Style="max-height:3rem; width:100%; --rz-border-width: 2px;">
+                                <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Style="width: 100%; height: 100%; padding: 0;">
+                                    <RadzenColumn Size="10" SizeMD="11">
+                                        <RadzenTextBox @bind-Value="searchText" Placeholder="Szukaj..." Style="width: 100%;" class="rz-border-0 rz-shadow-0 rz-p-0 rz-px-2" />
+                                    </RadzenColumn>
+                                            <RadzenColumn Size="2" SizeMD="1">
+                                        <RadzenButton Icon="search" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" ButtonType="ButtonType.Button" Style="width: 2rem; height: 2rem;" class="rz-border-0 rz-shadow-0 rz-p-0" />
+                                    </RadzenColumn>
+                             </RadzenRow>
+                                   </RadzenCard>
+                           </RadzenStack>
+                    </RadzenColumn>
+                    <RadzenColumn Size="0" SizeMD="3">
+
+                    </RadzenColumn>
+                </RadzenRow>
             </RadzenColumn>
             <RadzenColumn Size="2" SizeMD="1">
                 <RadzenProfileMenu>
@@ -21,11 +43,11 @@
                     <ChildContent>
                         <AuthorizeView>
                             <NotAuthorized>
-                        <RadzenProfileMenuItem Text="Register" Path="Auth/Register" Icon="person_add"></RadzenProfileMenuItem>
-                        <RadzenProfileMenuItem Text="Zaloguj się" Path="Account/Login" Icon="line_weight"></RadzenProfileMenuItem>
-                     </NotAuthorized>
-            <Authorized>
-         
+                                <RadzenProfileMenuItem Text="Register" Path="Auth/Register" Icon="person_add"></RadzenProfileMenuItem>
+                                <RadzenProfileMenuItem Text="Zaloguj się" Path="Account/Login" Icon="line_weight"></RadzenProfileMenuItem>
+                            </NotAuthorized>
+                            <Authorized>
+
                                 <form action="Account/Logout" method="post">
                                     <AntiforgeryToken />
                                     <input type="hidden" name="ReturnUrl" value="@currentUrl" />
@@ -36,22 +58,28 @@
                     </ChildContent>
                 </RadzenProfileMenu>
             </RadzenColumn>
-             </RadzenRow>
+        </RadzenRow>
+        <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Style="background-color: #d1d1d1;">
+            <RadzenColumn Size="12">
+                <TopMenu />
+            </RadzenColumn>
+        </RadzenRow>
     </RadzenHeader>
     <RadzenBody>
         <div class="rz-p-4">
             @Body
         </div>
     </RadzenBody>
-<RadzenFooter>
-    <p>HKR Software @DateTime.Now.ToString("yyyy") ver. 1.04</p>
-</RadzenFooter>
+    <RadzenFooter>
+        <p>HKR Software @DateTime.Now.ToString("yyyy") ver. 1.04</p>
+    </RadzenFooter>
 </RadzenLayout>
 @code
 {
     private string? currentUrl;
     bool sidebar1Expanded = true;
     private string userRole = "Brak";
+    public string searchText { get; set; } = string.Empty;
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
