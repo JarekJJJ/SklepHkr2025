@@ -18,15 +18,13 @@
                     <RadzenColumn Size="12" SizeMD="6">
                         <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal">
 
-                            <RadzenCard class="rz-border rz-border-color-dark rz-border-radius-5  rz-p-1 rz-shadow-0 " Style="max-height:3rem; width:100%; --rz-border-width: 2px;">
-                                <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Style="width: 100%; height: 100%; padding: 0;">
-                                    <RadzenColumn Size="10" SizeMD="11">
+                            <RadzenCard class="rz-border rz-border-color-dark rz-border-radius-5  rz-p-0 rz-mx-4 rz-mt-2 rz-shadow-0 " Style="max-height:3rem; width:100%; --rz-border-width: 2px;">
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0" class="rz-p-1">
                                         <RadzenTextBox @bind-Value="searchText" Placeholder="Szukaj..." Style="width: 100%;" class="rz-border-0 rz-shadow-0 rz-p-0 rz-px-2" />
-                                    </RadzenColumn>
-                                            <RadzenColumn Size="2" SizeMD="1">
+                            
                                         <RadzenButton Icon="search" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" ButtonType="ButtonType.Button" Style="width: 2rem; height: 2rem;" class="rz-border-0 rz-shadow-0 rz-p-0" />
-                                    </RadzenColumn>
-                             </RadzenRow>
+                                 
+                           </RadzenStack>
                                    </RadzenCard>
                            </RadzenStack>
                     </RadzenColumn>

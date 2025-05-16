@@ -1,0 +1,38 @@
+﻿@page "/admin/incom/settings"
+@using SklepHkr2025.Model
+@inject NotificationService NotificationService
+
+<RadzenStack AlignItems="AlignItems.Center">
+    <RadzenCard class="rz-m-0 rz-m-md-12" Style="width: 100%; max-width: 600px;">
+        <RadzenFileInput @bind-Value=@fileByte @bind-FileName=@file.FileName IsImage  @bind-FileSize=@file.FileSize TValue="string" Style="width: 100%"
+        Change=@(args => OnChange(args, "FileInput")) Error=@(args => OnError(args, "FileInput")) InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "select file" }})" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center" Gap="1rem" class="rz-p-4">
+            <RadzenButton Icon="save" ButtonType="ButtonType.Button" Text="Zapisz" Click=@SaveFile ButtonStyle="ButtonStyle.Primary" />
+            <RadzenButton Icon="cancel" ButtonType="ButtonType.Button" Text="Anuluj" ButtonStyle="ButtonStyle.Base" />
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    public FileForListVm file = new();
+    public string fileByte { get; set; } 
+    protected override async Task OnInitializedAsync()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Info", "Wybierz plik do przesłania");
+    }
+
+    void OnChange(string value, string name)
+    {
+
+
+    }
+    void OnError(UploadErrorEventArgs args, string name)
+    {
+        NotificationService.Notify(NotificationSeverity.Error, "Error", $"Error: {args.Message}");
+    }
+    async Task SaveFile()
+    {
+        
+    }
+}

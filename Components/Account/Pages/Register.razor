@@ -114,8 +114,9 @@
         }
         if (!veryfiOk)
         {
-            return;
             DialogService.Close();
+            return;
+   
         }
 
         var user = CreateUser();
@@ -166,9 +167,10 @@
         }
         catch
         {
+            DialogService.Close(false);
             throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
                 $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
-            DialogService.Close(false);
+      
         }
     }
 
@@ -176,8 +178,9 @@
     {
         if (!UserManager.SupportsUserEmail)
         {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
             DialogService.Close(false);
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+   
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }

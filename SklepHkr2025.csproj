@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MailKit" Version="4.12.0" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.4" />
@@ -17,9 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\Entity\" />
-    <Folder Include="Application\" />
-    <Folder Include="Application\" />
+    <Folder Include="Application\Common\Files\Queries\" />
+    <Folder Include="wwwroot\Files\xml\" />
   </ItemGroup>
 
 </Project>
