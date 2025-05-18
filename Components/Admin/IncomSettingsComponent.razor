@@ -1,25 +1,125 @@
 ﻿@page "/admin/incom/settings"
 @using SklepHkr2025.Model
 @inject NotificationService NotificationService
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.AspNetCore.SignalR.Client
+@using SklepHkr2025.Services
+@using SklepHkr2025.Services.Incom
+@using SklepHkr2025.Services.Files
+@inject ILogger<IncomSettingsComponent> Logger
+@inject IWebHostEnvironment Environment
+@inject NavigationManager NavigationManager
+@inject IIncomService IncomService
+@inject IFileService FileService
 
-<RadzenStack AlignItems="AlignItems.Center">
-    <RadzenCard class="rz-m-0 rz-m-md-12" Style="width: 100%; max-width: 600px;">
-        <RadzenFileInput @bind-Value=@fileByte @bind-FileName=@file.FileName IsImage  @bind-FileSize=@file.FileSize TValue="string" Style="width: 100%"
-        Change=@(args => OnChange(args, "FileInput")) Error=@(args => OnError(args, "FileInput")) InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "select file" }})" />
+<RadzenRow Gap="2rem" class="rz-p-0 rz-p-lg-4">
+    <RadzenColumn Size="12" SizeMD="6">
+        <RadzenStack>
+            <RadzenFieldset Text="Grupy Towarowe Incom">
+                <RadzenStack Gap="1rem">
+                    @if (fileExistsIncomGroupXml)
+                    {
+                        <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal">
+                            <RadzenText >
+                                <RadzenIcon Icon="check_circle" Style="color: green; font-size: 1.5rem;" />
+                                <span> Plik xml istnieje. Ostatnia modyfikacja: @fileDateIncomGroupXml?.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                            </RadzenText>
+                        </RadzenStack>
+                    }
+                    else
+                    {
+                        <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal">
+                            <RadzenText>
+                                <RadzenIcon Icon="error" Style="color: red; font-size: 1.5rem;" />
+                                <span> Plik nie istnieje. Wczytaj plik Xml</span>
+                            </RadzenText>
+                        </RadzenStack>                      
+                    }
+                    <RadzenRow AlignItems="AlignItems.Center">
+                        <RadzenColumn Size="12" SizeMD="4">
+                            <RadzenLabel Text="Wczytaj xml na serwer" Component="uploadXml" />
+                        </RadzenColumn>
+                        <RadzenColumn Size="12" SizeMD="8">
+                            <div class="input-group mb-3">
+                                <label class="input-group-text" for="inputGroup01">Upload</label>
+                                <InputFile OnChange="LoadFile" class="form-control" id="inputGroup01"/>
 
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center" Gap="1rem" class="rz-p-4">
-            <RadzenButton Icon="save" ButtonType="ButtonType.Button" Text="Zapisz" Click=@SaveFile ButtonStyle="ButtonStyle.Primary" />
-            <RadzenButton Icon="cancel" ButtonType="ButtonType.Button" Text="Anuluj" ButtonStyle="ButtonStyle.Base" />
+                            </div>
+                        </RadzenColumn>
+                    </RadzenRow>
+                    <RadzenRow AlignItems="AlignItems.Center">
+                        <RadzenColumn Size="12" SizeMD="4">
+                            <RadzenLabel Text="Przetwarzaj wczytany plik"/>
+                        </RadzenColumn>
+                        <RadzenColumn Size="12" SizeMD="8">
+                            <RadzenButton ButtonType="ButtonType.Button"  Icon="save" Text="Przetwarzaj" Click="@DataProcess" />
+                        </RadzenColumn>
+                    </RadzenRow>
+                    <RadzenRow AlignItems="AlignItems.Center">
+                        <RadzenColumn Size="12">
+                            @if (total > 0)
+                            {
+                                <div class="progress-info">
+                                    <RadzenProgressBar Value="@progressPercent" ShowValue="true" Max="100" />
+                                    <div>@progressMessage</div>
+                                </div>
+                            }
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenStack>
+            </RadzenFieldset>
         </RadzenStack>
-    </RadzenCard>
-</RadzenStack>
+    </RadzenColumn>
+    <RadzenColumn Size="12" SizeMD="6">
+        <RadzenStack>
+            <RadzenFieldset Text="Purchase Info">
+                <RadzenStack Gap="1rem">
+                    <RadzenRow AlignItems="AlignItems.Center">
+
+                    </RadzenRow>
+                </RadzenStack>
+            </RadzenFieldset>
+        </RadzenStack>
+    </RadzenColumn>
+</RadzenRow>
+
 
 @code {
+    private IBrowserFile loadedFile;
     public FileForListVm file = new();
-    public string fileByte { get; set; } 
+    public string fileByte { get; set; } = "";
+    private bool isLoading = false;
+    private long maxFileSize = 1024 * 150;
+    private HubConnection? hubConnection;
+    private string? connectionId;
+    private int progressPercent;
+    private int processed;
+    private int total;
+    private string? progressMessage;
+    private bool fileExistsIncomGroupXml;
+    private DateTime? fileDateIncomGroupXml;
     protected override async Task OnInitializedAsync()
     {
-        NotificationService.Notify(NotificationSeverity.Info, "Info", "Wybierz plik do przesłania");
+        var pathIncomGroupXml = Path.Combine(Environment.ContentRootPath, "wwwroot", "files", "xml", "incomGroupTemp.xml");
+        var info = FileService.GetFileInfo(pathIncomGroupXml);
+        fileExistsIncomGroupXml = info.Exists;
+        fileDateIncomGroupXml = info.LastWriteTime;
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/progressHub"))
+            .Build();
+
+        await hubConnection.StartAsync();
+
+        // Pobierz connectionId z serwera
+        connectionId = await hubConnection.InvokeAsync<string>("GetConnectionId");
+        hubConnection.On<int, int, int>("ProgressUpdate", (percent, processedCount, totalCount) =>
+    {
+        progressPercent = percent;
+        processed = processedCount;
+        total = totalCount;
+        progressMessage = $"Przetworzono {processed} z {total} rekordów ({progressPercent}%)";
+        InvokeAsync(StateHasChanged);
+    });
     }
 
     void OnChange(string value, string name)
@@ -31,8 +131,45 @@
     {
         NotificationService.Notify(NotificationSeverity.Error, "Error", $"Error: {args.Message}");
     }
-    async Task SaveFile()
+    async Task DataProcess()
     {
-        
+        await IncomService.AddIncomGroup(connectionId);
+    }
+    async Task LoadFile(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        var file = e.File;
+        try
+        {
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+            // Sprawdź, czy to PDF
+            if (extension != ".xml")
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Błąd", "Dozwolone są tylko pliki xml.");
+                isLoading = false;
+                return;
+            }
+
+            // Zbuduj bezpieczną nazwę pliku z oryginalnym rozszerzeniem
+            var trustedFileName = Path.GetFileNameWithoutExtension("incomGroupTemp") + extension;
+            var path = Path.Combine(Environment.ContentRootPath, "wwwroot", "files", "xml", trustedFileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
+
+            await using FileStream fs = new(path, FileMode.Create);
+            await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+            loadedFile = file;
+
+            Logger.LogInformation(
+                "Unsafe Filename: {UnsafeFilename} File saved: {Filename}",
+                file.Name, trustedFileName);
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("File: {Filename} Error: {Error}",
+                file.Name, ex.Message);
+        }
     }
 }

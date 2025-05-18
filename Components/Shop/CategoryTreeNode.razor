@@ -1,0 +1,20 @@
+﻿@using SklepHkr2025.Model.Shop
+
+@if (Category != null)
+{
+    <RadzenTreeItem @key="Category.IdCategory" Text="@Category.Name">
+        @if (Category.ChildCategories != null && Category.ChildCategories.Any())
+        {
+            @foreach (var child in Category.ChildCategories)
+            {
+                <CategoryTreeNode Category="@child" @key="child.IdCategory" />
+            }
+        }
+    </RadzenTreeItem>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public TreeCategoryForListVm Category { get; set; }
+}
+

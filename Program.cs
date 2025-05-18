@@ -3,13 +3,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Radzen;
-using SklepHkr2025.Application.Common.Files.Command;
 using SklepHkr2025.Components;
 using SklepHkr2025.Components.Account;
 using SklepHkr2025.Data;
 using SklepHkr2025.Services;
 using SklepHkr2025.Services.Email;
 using SklepHkr2025.Services.Files;
+using SklepHkr2025.Services.Incom;
+using SklepHkr2025.Services.Shop;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,15 +18,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddRadzenComponents();
-builder.Services.AddMediatR(cfg => {
-    cfg.RegisterServicesFromAssembly(typeof(AddFilesToDiskCommand).Assembly);
-    //cfg.AddBehavior<PingPongBehavior>();
-    //cfg.AddStreamBehavior<PingPongStreamBehavior>();
-    //cfg.AddRequestPreProcessor<PingPreProcessor>();
-    //cfg.AddRequestPostProcessor<PingPongPostProcessor>();
-    //cfg.AddOpenBehavior(typeof(GenericBehavior<,>));
-});
-builder.Services.AddTransient<ISaveFile, SaveFile>();
+//builder.Services.AddMediatR(cfg => {
+//    cfg.RegisterServicesFromAssembly(typeof(AddFilesToDiskCommand).Assembly);
+//    //cfg.AddBehavior<PingPongBehavior>();
+//    //cfg.AddStreamBehavior<PingPongStreamBehavior>();
+//    //cfg.AddRequestPreProcessor<PingPreProcessor>();
+//    //cfg.AddRequestPostProcessor<PingPongPostProcessor>();
+//    //cfg.AddOpenBehavior(typeof(GenericBehavior<,>));
+//});
+builder.Services.AddTransient<IFileService, FileService>();
+builder.Services.AddTransient<IIncomService, IncomService>();
+builder.Services.AddTransient<IShopService, ShopService>();
 builder.Services.AddScoped<RecaptchaService>();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
@@ -73,7 +76,7 @@ app.UseHttpsRedirection();
 
 
 app.UseAntiforgery();
-
+app.MapHub<ProgressHub>("/progressHub");
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

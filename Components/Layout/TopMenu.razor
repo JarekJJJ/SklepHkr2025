@@ -4,8 +4,15 @@
 
 <RadzenMenu>
     <RadzenMenuItem Text="Home" Icon="home" Path="/"/>
+    <RadzenMenuItem Text="Sklep" Icon="store" Path="/sklep" />
     <RadzenMenuItem Text="Administracja" Icon="payment" Disabled="false">
-        <RadzenMenuItem Text="Incom ustawienia" Path="/admin/incom/settings" Icon="settings"></RadzenMenuItem>
+        <RadzenMenuItem Text="Ustawienia dostawcy" Icon="warehouse">
+            <RadzenMenuItem Text="Incom ustawienia" Path="/admin/incom/settings" Icon="settings"></RadzenMenuItem>
+        </RadzenMenuItem>
+        <RadzenMenuItem Text="Ustawienia kategorie sklep" Icon="storefront">
+            <RadzenMenuItem Text="Kategorie sklep - lista" Path="/admin/shop/categories" Icon="list"></RadzenMenuItem>
+        </RadzenMenuItem>
+    
 
     </RadzenMenuItem>
 </RadzenMenu>

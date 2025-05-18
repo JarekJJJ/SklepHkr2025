@@ -1,0 +1,73 @@
+﻿@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Style="">
+    <RadzenColumn Size="12" SizeMD="2">
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-mx-auto rz-my-1">
+            <RadzenImage Path="images/hkr24.png" Style="width: 10rem;" AlternateText="url image" />
+        </RadzenStack>
+    </RadzenColumn>
+    <RadzenColumn Size="10" SizeMD="9">
+        <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
+            <RadzenColumn Size="0" SizeMD="3">
+
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeMD="6">
+                <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal">
+
+                    <RadzenCard class="rz-border rz-border-color-dark rz-border-radius-5  rz-p-0 rz-mx-4 rz-mt-2 rz-shadow-0 " Style="max-height:3rem; width:100%; --rz-border-width: 2px;">
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0" class="rz-p-1">
+                            <RadzenTextBox @bind-Value="searchText" Placeholder="Szukaj..." Style="width: 100%;" class="rz-border-0 rz-shadow-0 rz-p-0 rz-px-2" />
+
+                            <RadzenButton Icon="search" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" ButtonType="ButtonType.Button" Style="width: 2rem; height: 2rem;" class="rz-border-0 rz-shadow-0 rz-p-0" />
+
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenStack>
+            </RadzenColumn>
+            <RadzenColumn Size="0" SizeMD="3">
+
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenColumn>
+    <RadzenColumn Size="2" SizeMD="1">
+        <RadzenProfileMenu>
+            <Template>
+                <RadzenIcon Icon="account_circle" Size="32px" />
+            </Template>
+            <ChildContent>
+                <AuthorizeView>
+                    <NotAuthorized>
+                        <RadzenProfileMenuItem Text="Register" Path="Auth/Register" Icon="person_add"></RadzenProfileMenuItem>
+                        <RadzenProfileMenuItem Text="Zaloguj się" Path="Account/Login" Icon="line_weight"></RadzenProfileMenuItem>
+                    </NotAuthorized>
+                    <Authorized>
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <RadzenButton Icon="logout" Text="Wyloguj się" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" ButtonType="ButtonType.Submit" Style="width: 100%;" />
+                        </form>
+                    </Authorized>
+                </AuthorizeView>
+            </ChildContent>
+        </RadzenProfileMenu>
+    </RadzenColumn>
+</RadzenRow>
+
+@code {
+    public string searchText { get; set; } = string.Empty;
+    private string userRole = "Brak";
+    private string? currentUrl;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // Pobierz pierwszą rolę użytkownika (jeśli ma przypisane role)
+            userRole = user.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Brak roli";
+        }
+    }
+
+}

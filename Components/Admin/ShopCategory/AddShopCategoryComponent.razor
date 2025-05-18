@@ -1,0 +1,114 @@
+﻿@using SklepHkr2025.Model.Shop
+@using SklepHkr2025.Services.Shop
+@inject IShopService ShopService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenTemplateForm TItem="ShopCategoryForListVm" Data="@shopCategory" Submit=@OnSubmit InvalidSubmit=@OnInvalidSubmit>
+    <DataAnnotationsValidator />
+    <RadzenRow Gap="2rem" class="rz-p-0 rz-p-lg-4">
+        <RadzenColumn Size="12">
+            <RadzenStack>
+                <RadzenFieldset Text="Dodaj kategorię">
+                    <RadzenStack Gap="1rem">
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="12" SizeMD="2">
+                                <RadzenLabel Text="Id kategorii nadrzędnej" Component="ParentCategoryId" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenDropDown Style="width: 100%;"
+                                                Name="ParentCategoryId"
+                                                Placeholder=""
+                                                Data="@allCategories"
+                                                TextProperty="Name"
+                                                ValueProperty="Id"
+                                                Value="@(string.IsNullOrEmpty(shopCategory.IdParentCategory) ? null : int.Parse(shopCategory.IdParentCategory))"
+                                                ValueChanged="@(v => shopCategory.IdParentCategory = v?.ToString())"
+                                                TValue="int?" />
+                                <RadzenRequiredValidator Component="ParentCategoryId" Text="Kategoria nadrzędna jest wymagana" Style="" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="12" SizeMD="2">
+                                <RadzenLabel Text="Nazwa Kategorii" Component="CategoryName" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenTextBox Style="width: 100%;" Name="CategoryName" Placeholder="" @bind-Value=shopCategory.Name />
+                                <RadzenRequiredValidator Component="CategoryName" Text="Nazwa kategorii jest wymagana" Style="" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenStack>
+                </RadzenFieldset>
+            </RadzenStack>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow>
+        <RadzenColumn Size="12">
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+                <RadzenButton ButtonType="ButtonType.Button" Icon="save" Text="Zapisz" Click=@OnSubmit />
+                <RadzenButton ButtonType="ButtonType.Button" Icon="cancel" Text="Anuluj" Click="@(() => DialogService.Close(false))" />
+            </RadzenStack>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenTemplateForm>
+
+@code {
+    [Parameter]
+    public int parentId { get; set; } = 0;
+
+    ShopCategoryForListVm shopCategory = new ShopCategoryForListVm();
+    IEnumerable<ShopCategoryForListVm> allCategories = Enumerable.Empty<ShopCategoryForListVm>();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        if (parentId == 0)
+        {
+            shopCategory.IdParentCategory = null;
+        }
+        else
+        {
+            shopCategory.IdParentCategory = parentId.ToString();
+        }
+    }
+    async Task LoadData()
+    {
+        allCategories = await ShopService.GetAllShopCategories();
+    }
+    private async Task OnSubmit()
+    {
+      var result =  await ShopService.CreateShopCategory(shopCategory);
+        if (result != null)
+        {
+            NotificationService.Notify(new NotificationMessage()
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Sukces",
+                    Detail = "Dodano nową kategorię",
+                    Duration = 4000
+                });
+            DialogService.Close(true);
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage()
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Błąd",
+                    Detail = "Nie udało się dodać kategorii",
+                    Duration = 4000
+                });
+            DialogService.Close(false);
+        }
+
+    }
+    private void OnInvalidSubmit()
+    {
+        NotificationService.Notify(new NotificationMessage()
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Błąd",
+                Detail = "Niepoprawne dane formularza",
+                Duration = 4000
+            });
+    }
+}

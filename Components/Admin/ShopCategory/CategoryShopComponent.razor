@@ -1,0 +1,177 @@
+﻿@page "/admin/shop/categories"
+@using SklepHkr2025.Model.Shop
+@using SklepHkr2025.Services.Shop
+@inject IShopService ShopService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<h3>Konfiguracja Kategorii w sklepie</h3>
+
+<RadzenRow Gap="2rem" class="rz-p-0 rz-p-lg-4">
+    <RadzenColumn Size="12">
+        <RadzenRow class="rz-background-color-white">
+            <RadzenColumn Size="12" class="rz-p-1 rz-border-radius-1" Style="border: var(--rz-grid-cell-border)">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start">
+                    <RadzenButton Icon="add" Text="Dodaj kategorię główną " Click="AddMainCategory" />
+                    <RadzenFormField Text="szukaj..." Variant="Variant.Outlined">
+                        <ChildContent>
+                            <InputText @bind-Value="@searchString" @oninput="@(e => SearchResult(e.Value?.ToString() ?? string.Empty))" style="width:150px; height:30px;" />
+                        </ChildContent>
+                        <End>
+                        </End>
+                    </RadzenFormField>
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenColumn>
+    <RadzenColumn Size="12">
+        <RadzenStack>
+            <RadzenDataGrid @ref="grid"
+                            AllowFiltering="false"
+                            AllowSorting="false"
+                            AllowColumnResize="true"
+                            Data="@rootCategories"
+                            RowRender="@RowRender"
+                            LoadChildData="@LoadChildData"
+                            TItem="ShopCategoryForListVm"
+                            RowCollapse="@(args => grid.ColumnsCollection.ToList().ForEach(c => c.ClearFilters()))">
+                <Columns>
+                    <RadzenDataGridColumn Property="Id" Title="Id kategorii" Width="50px"  />
+                    <RadzenDataGridColumn Property="Name" Title="Nazwa kategorii"  />
+                    <RadzenDataGridColumn Property="IdParentCategory" Title="Id kategorii nadrzędnej" Width="100px"  />
+                    <RadzenDataGridColumn Title="Opcje">
+                        <Template Context="data">
+                            <RadzenButton Icon="add" ButtonStyle="ButtonStyle.Base" Text="Dodaj podkategorię" Click="@((args) => AddSubCategory(data))" />
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Base" Text="Edytuj" Click="@((args) => EditCategory(data))" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Base" Text="Usuń" Click="@((args) => DeleteCategory(data))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenStack>
+    </RadzenColumn>
+</RadzenRow>
+
+@code {
+    RadzenDataGrid<ShopCategoryForListVm> grid;
+    List<ShopCategoryForListVm> allCategories = new();
+    IEnumerable<ShopCategoryForListVm> rootCategories = Enumerable.Empty<ShopCategoryForListVm>();
+    private string searchString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender && rootCategories.Any())
+        {
+            await grid.ExpandRow(rootCategories.First());
+        }
+    }
+
+    async Task LoadData()
+    {
+        allCategories = (await ShopService.GetAllShopCategories()).ToList();
+        rootCategories = allCategories.Where(c => string.IsNullOrEmpty(c.IdParentCategory));
+    }
+
+    void RowRender(RowRenderEventArgs<ShopCategoryForListVm> args)
+    {
+        var idString = args.Data.Id?.ToString();
+        args.Expandable = !string.IsNullOrEmpty(idString) && allCategories.Any(c => c.IdParentCategory == idString);
+    }
+
+    void LoadChildData(DataGridLoadChildDataEventArgs<ShopCategoryForListVm> args)
+    {
+        var idString = args.Item.Id?.ToString();
+        args.Data = string.IsNullOrEmpty(idString)
+            ? Enumerable.Empty<ShopCategoryForListVm>()
+            : allCategories.Where(c => c.IdParentCategory == idString);
+    }
+
+    async Task EditCategory(ShopCategoryForListVm category)
+    {
+        // Logika edycji kategorii
+    }
+
+    async Task DeleteCategory(ShopCategoryForListVm category)
+    {
+        var resultAny = allCategories.Any(c => c.IdParentCategory == category.Id.ToString());
+        if (resultAny)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Błąd", $"Nie można usunąć kategorii {category.Name}, ponieważ ma podkategorie.");
+            return;
+        }
+        var result = await DialogService.Confirm($"Czy na pewno chcesz usunąć kategorię {category.Name}?", "Potwierdzenie", new ConfirmOptions() { OkButtonText = "Tak", CancelButtonText = "Anuluj" });
+        if (result == true)
+        {
+           var resultDelete =   await ShopService.DeleteShopCategory((int)category.Id);
+            if (resultDelete == true)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Sukces", $"Kategoria {category.Name} została usunięta.");
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Błąd", $"Nie można usunąć kategorii {category.Name}.");
+            }
+            await LoadData();
+            await grid.Reload();
+        }
+    }
+
+    async Task AddSubCategory(ShopCategoryForListVm category)
+    {
+        DialogOptions options = new DialogOptions()
+            {
+                Width = "700px",
+                Height = "600px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = false,
+                ShowClose = true,
+                ShowTitle = true
+            };
+        var result = await DialogService.OpenAsync<AddShopCategoryComponent>("Dodaj Podkategorię", new Dictionary<string, object> { { "parentId", category.Id } }, options);
+        if (result != null && result == true)
+        {
+            await LoadData();
+            await grid.Reload();
+        }
+    }
+
+    async Task AddMainCategory()
+    {
+        DialogOptions options = new DialogOptions()
+            {
+                Width = "700px",
+                Height = "600px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = false,
+                ShowClose = true,
+                ShowTitle = true
+            };
+        var result = await DialogService.OpenAsync<AddShopCategoryComponent>("Dodaj Kategorię", null, options);
+        if (result != null && result == true)
+        {
+            await LoadData();
+            await grid.Reload();
+        }
+    }
+
+    private void SearchResult(string args)
+    {
+        searchString = args;
+        if (string.IsNullOrEmpty(searchString))
+        {
+            rootCategories = allCategories.Where(c => string.IsNullOrEmpty(c.IdParentCategory));
+        }
+        else
+        {
+            rootCategories = allCategories
+                .Where(c => string.IsNullOrEmpty(c.IdParentCategory) && (c.Name?.ToLower().Contains(searchString.ToLower()) ?? false));
+        }
+    }
+}

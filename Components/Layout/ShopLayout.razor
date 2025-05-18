@@ -1,13 +1,16 @@
 ﻿@inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject DialogService DialogService
 <RadzenComponents />
 <RadzenLayout>
-    <RadzenHeader>  
+    <RadzenHeader>
         <TopPanelComponent />
-        <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Style="background-color: #d1d1d1;">
-            <RadzenColumn Size="12">
-
+        <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
+            <RadzenColumn Size="2" SizeMD="1">
+                <RadzenButton Icon="menu" ButtonStyle="ButtonStyle.Base" Text="Kategorie" Variant="Variant.Text" ButtonType="ButtonType.Button" Style="width: 2rem; height: 2rem;" class="rz-border-0 rz-shadow-0 rz-p-0" Click="@(() => OpenMenuLeftDialog())" />
+            </RadzenColumn>
+            <RadzenColumn Size="10" SizeMD="11">
                 <TopMenu />
             </RadzenColumn>
         </RadzenRow>
@@ -21,13 +24,13 @@
         <p>HKR Software @DateTime.Now.ToString("yyyy") ver. 1.04</p>
     </RadzenFooter>
 </RadzenLayout>
-@code
-{
-    bool sidebarExpanded = true;
+
+@code {
+    bool sidebarExpanded = false;
     private string? currentUrl;
-    bool sidebar1Expanded = true;
     private string userRole = "Brak";
     private string? currentPath;
+    private bool dialogOpened = false;
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -39,6 +42,17 @@
             userRole = user.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Brak roli";
         }
     }
-    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !dialogOpened)
+        {
+            dialogOpened = true;
+            await OpenMenuLeftDialog();
+        }
+    }
+    async Task OpenMenuLeftDialog()
+    {
+        await DialogService.OpenSideAsync<LeftPanelCategoryComponent>("Kategorie", options: new SideDialogOptions { CloseDialogOnOverlayClick = false, Width = "200px" , Position = DialogPosition.Left, ShowMask = false });
+    }
 
 }

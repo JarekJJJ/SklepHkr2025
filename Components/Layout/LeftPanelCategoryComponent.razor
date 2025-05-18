@@ -1,0 +1,69 @@
+﻿@using SklepHkr2025.Model.Shop
+@using SklepHkr2025.Services.Shop
+@using SklepHkr2025.Components.Shop
+
+@inject IShopService ShopService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenTextBox AutoCompleteType="AutoCompleteType.Off" placeholder="Szukaj kategorii..." type="search"
+    @oninput="@Filter" style="width:100%" class="rz-search-input" aria-label="find" />
+
+<RadzenTree Style="height:300px;width:100%;">
+    @foreach (var category in filteredCategories)
+    {
+        <RadzenTreeItem @key=category.IdCategory Text="@category.Name">
+            @if (category.ChildCategories != null && category.ChildCategories.Any())
+            {
+                @foreach (var child in category.ChildCategories)
+                {
+                    <CategoryTreeNode Category="child" />
+                }
+            }
+        </RadzenTreeItem>
+    }
+</RadzenTree>
+
+@code {
+    List<TreeCategoryForListVm> allCategories = new();
+    List<TreeCategoryForListVm> filteredCategories = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        allCategories = await ShopService.GetCategoryTreeAsync();
+        filteredCategories = allCategories;
+    }
+
+    void Filter(ChangeEventArgs args)
+    {
+        var term = $"{args.Value}".ToLower();
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            filteredCategories = allCategories;
+        }
+        else
+        {
+            filteredCategories = FilterTree(allCategories, term);
+        }
+    }
+
+    // Rekurencyjne filtrowanie drzewa
+    List<TreeCategoryForListVm> FilterTree(IEnumerable<TreeCategoryForListVm> nodes, string term)
+    {
+        var result = new List<TreeCategoryForListVm>();
+        foreach (var node in nodes)
+        {
+            var filteredChildren = FilterTree(node.ChildCategories, term);
+            if (node.Name.ToLower().Contains(term) || filteredChildren.Any())
+            {
+                result.Add(new TreeCategoryForListVm
+                {
+                    IdCategory = node.IdCategory,
+                    Name = node.Name,
+                    ChildCategories = filteredChildren
+                });
+            }
+        }
+        return result;
+    }
+}
