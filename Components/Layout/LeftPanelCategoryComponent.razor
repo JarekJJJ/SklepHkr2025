@@ -9,10 +9,10 @@
 <RadzenTextBox AutoCompleteType="AutoCompleteType.Off" placeholder="Szukaj kategorii..." type="search"
     @oninput="@Filter" style="width:100%" class="rz-search-input" aria-label="find" />
 
-<RadzenTree Style="height:300px;width:100%;">
+<RadzenTree Style="height:300px;width:100%;" Change="@SelectCategory">
     @foreach (var category in filteredCategories)
     {
-        <RadzenTreeItem @key=category.IdCategory Text="@category.Name">
+        <RadzenTreeItem @key=category.IdCategory  Text="@category.Name" Value="category">
             @if (category.ChildCategories != null && category.ChildCategories.Any())
             {
                 @foreach (var child in category.ChildCategories)
@@ -65,5 +65,22 @@
             }
         }
         return result;
+    }
+    async Task SelectCategory(object args)
+    {
+        if (args is Radzen.TreeEventArgs treeArgs && treeArgs.Value is TreeCategoryForListVm category)
+        {
+            var categoryId = category.IdCategory;
+            var categoryName = category.Name;
+
+            NotificationService.Notify(new NotificationMessage()
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Sukces",
+                    Detail = $"Wybrano kategorię: {categoryName} (ID: {categoryId})",
+                    Duration = 4000
+                });
+        }
+     
     }
 }

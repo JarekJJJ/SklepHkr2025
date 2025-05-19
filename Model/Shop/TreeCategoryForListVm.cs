@@ -4,6 +4,6 @@
     {
         public string IdCategory { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
-        public List<TreeCategoryForListVm> ChildCategories { get; set; } = new List<TreeCategoryForListVm>();
+        public List<TreeCategoryForListVm>? ChildCategories { get; set; } = new List<TreeCategoryForListVm>();
     }
 }

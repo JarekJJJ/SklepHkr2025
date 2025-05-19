@@ -2,7 +2,7 @@
 
 @if (Category != null)
 {
-    <RadzenTreeItem @key="Category.IdCategory" Text="@Category.Name">
+    <RadzenTreeItem @key="Category.IdCategory" Text="@Category.Name" Value="Category">
         @if (Category.ChildCategories != null && Category.ChildCategories.Any())
         {
             @foreach (var child in Category.ChildCategories)
