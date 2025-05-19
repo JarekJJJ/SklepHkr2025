@@ -2,6 +2,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject DialogService DialogService
+@inject NotificationService NotificationService
 <RadzenComponents />
 <RadzenLayout>
     <RadzenHeader>
@@ -52,7 +53,22 @@
     }
     async Task OpenMenuLeftDialog()
     {
-        await DialogService.OpenSideAsync<LeftPanelCategoryComponent>("Kategorie", options: new SideDialogOptions { CloseDialogOnOverlayClick = false, Width = "200px" , Position = DialogPosition.Left, ShowMask = false });
+        var parameters = new Dictionary<string, object>()
+        {
+            { "OnParamChanged", (Action<string, string>)OnDialogParamChanged }
+        };
+        await DialogService.OpenSideAsync<LeftPanelCategoryComponent>("Kategorie",parameters, options: new SideDialogOptions { CloseDialogOnOverlayClick = false, Width = "200px" , Position = DialogPosition.Left, ShowMask = false });
+    }
+    void OnDialogParamChanged(string param1, string param2)
+    {
+        NotificationService.Notify(new NotificationMessage()
+            {
+                Severity = NotificationSeverity.Info,
+                Summary = "Parametr z dialogu",
+                Detail = $"Nazwa Kategorii {param1}, Numer Id {param2}",
+                Duration = 4000
+            });
+        // Obsługa parametrów z dialogu
     }
 
 }

@@ -25,6 +25,7 @@
 </RadzenTree>
 
 @code {
+    [Parameter] public Action<string, string> OnParamChanged { get; set; }
     List<TreeCategoryForListVm> allCategories = new();
     List<TreeCategoryForListVm> filteredCategories = new();
 
@@ -73,13 +74,14 @@
             var categoryId = category.IdCategory;
             var categoryName = category.Name;
 
-            NotificationService.Notify(new NotificationMessage()
-                {
-                    Severity = NotificationSeverity.Success,
-                    Summary = "Sukces",
-                    Detail = $"Wybrano kategorię: {categoryName} (ID: {categoryId})",
-                    Duration = 4000
-                });
+            OnParamChanged?.Invoke($"{categoryName}", categoryId);
+            // NotificationService.Notify(new NotificationMessage()
+            //     {
+            //         Severity = NotificationSeverity.Success,
+            //         Summary = "Sukces",
+            //         Detail = $"Wybrano kategorię: {categoryName} (ID: {categoryId})",
+            //         Duration = 4000
+            //     });
         }
      
     }
