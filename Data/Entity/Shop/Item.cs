@@ -19,8 +19,8 @@ namespace SklepHkr2025.Data.Entity.Shop
         public string? ItemSymbol { get; set; }
         public Guid? MainImageId { get; set; }
         public ICollection<ItemImage>? ItemImages { get; set; } = new List<ItemImage>();
-        public int ProducentId { get; set; }
-        public Producent? Producent { get; set; }
+        public int? ProducentId { get; set; }
+        public ProducentDetail? Producent { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? Lenght { get; set; }
         [Column(TypeName = "decimal(18, 2)")]

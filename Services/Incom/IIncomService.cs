@@ -3,5 +3,6 @@
     public interface IIncomService
     {
         Task AddIncomGroup(string connectionId);
+        Task AddProducentDetail(string connectionId);
     }
 }

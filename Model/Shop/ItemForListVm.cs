@@ -19,7 +19,7 @@ namespace SklepHkr2025.Model.Shop
         public Guid? MainImageId { get; set; } 
         public ICollection<ItemImageForListVm>? ItemImages { get; set; } = new List<ItemImageForListVm>();
         public int ProducentId { get; set; }
-        public ProducentForListVm? Producent { get; set; }
+        public ProducentDetailForListVm? Producent { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? Lenght { get; set; }
         [Column(TypeName = "decimal(18, 2)")]

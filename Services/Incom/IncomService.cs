@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using SklepHkr2025.Data;
 using SklepHkr2025.Data.Entity.Incom;
+using SklepHkr2025.Data.Entity.Shop;
 using SklepHkr2025.Model.Incom;
 using System.Xml;
 
@@ -103,5 +104,173 @@ namespace SklepHkr2025.Services.Incom
                 }
             }
         }
+        public async Task AddProducentDetail(string connectionId)
+        {
+            var filePath = Path.Combine("wwwroot", "Files", "xml", "AllItemFullTemp.xml");
+            if (!File.Exists(filePath))
+            {
+                await _hubContext.Clients.Client(connectionId)
+                    .SendAsync("ProgressUpdate", 0, 0, 0, "Plik XML nie istnieje.");
+                return;
+            }
+
+            int total = 0, processed = 0;
+            int batchSize = 100;
+            var batch = new List<ProducentDetail>(batchSize);
+
+            // Liczenie producentów
+            using (var countReader = XmlReader.Create(filePath, new XmlReaderSettings { Async = true }))
+            {
+                while (await countReader.ReadAsync())
+                {
+                    if (countReader.NodeType == XmlNodeType.Element && countReader.Name == "p")
+                        total++;
+                }
+            }
+
+            _context.ProducentDetails.RemoveRange(_context.ProducentDetails);
+            await _context.SaveChangesAsync();
+            using var stream = File.OpenRead(filePath);
+            using var reader = XmlReader.Create(stream, new XmlReaderSettings { Async = true });
+
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == XmlNodeType.Element && reader.Name == "p")
+                {
+                    int? id = null;
+                    string? name = null, countryCode = null, street = null, postalCode = null, city = null, email = null, phone = null;
+
+                    if (reader.HasAttributes)
+                    {
+                        var idValue = reader.GetAttribute("id");
+                        if (int.TryParse(idValue, out int idParsed))
+                            id = idParsed;
+                    }
+
+                    using (var pReader = reader.ReadSubtree())
+                    {
+                        await pReader.ReadAsync(); // <p>
+                        while (await pReader.ReadAsync())
+                        {
+                            if (pReader.NodeType == XmlNodeType.Element)
+                            {
+                                switch (pReader.Name)
+                                {
+                                    case "name":
+                                        if (await pReader.ReadAsync() &&
+                                            (pReader.NodeType == XmlNodeType.Text || pReader.NodeType == XmlNodeType.CDATA))
+                                        {
+                                            name = pReader.Value;
+                                        }
+                                        break;
+                                    case "address":
+                                        using (var addressReader = pReader.ReadSubtree())
+                                        {
+                                            await addressReader.ReadAsync(); // <address>
+                                            while (await addressReader.ReadAsync())
+                                            {
+                                                if (addressReader.NodeType == XmlNodeType.Element)
+                                                {
+                                                    switch (addressReader.Name)
+                                                    {
+                                                        case "countryCode":
+                                                            if (await addressReader.ReadAsync() && 
+                                                                (addressReader.NodeType == XmlNodeType.Text || addressReader.NodeType == XmlNodeType.CDATA))
+                                                            {
+                                                                countryCode = addressReader.Value;
+                                                            }
+                                                            break;
+                                                        case "street":
+                                                            if (await addressReader.ReadAsync() &&
+                                                               (addressReader.NodeType == XmlNodeType.Text || addressReader.NodeType == XmlNodeType.CDATA))
+                                                            {
+                                                                street = addressReader.Value;
+                                                            }
+                                                            break;
+                                                        case "postalCode":
+                                                            if (await addressReader.ReadAsync() &&
+                                                          (addressReader.NodeType == XmlNodeType.Text || addressReader.NodeType == XmlNodeType.CDATA))
+                                                            {
+                                                                postalCode = addressReader.Value;
+                                                            }
+                                                            break;
+                                                        case "city":
+                                                            if (await addressReader.ReadAsync() &&
+                                                            (addressReader.NodeType == XmlNodeType.Text || addressReader.NodeType == XmlNodeType.CDATA))
+                                                            {
+                                                                city = addressReader.Value;
+                                                            }
+                                                            break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    case "contact":
+                                        using (var contactReader = pReader.ReadSubtree())
+                                        {
+                                            await contactReader.ReadAsync(); // <contact>
+                                            while (await contactReader.ReadAsync())
+                                            {
+                                                if (contactReader.NodeType == XmlNodeType.Element)
+                                                {
+                                                    var nodeName = contactReader.Name;
+                                                    if (nodeName == "email" || nodeName == "phoneNumber")
+                                                    {
+                                                        if (await contactReader.ReadAsync() && contactReader.NodeType == XmlNodeType.CDATA)
+                                                        {
+                                                            if (nodeName == "email")
+                                                                email = contactReader.Value;
+                                                            else if (nodeName == "phoneNumber")
+                                                                phone = contactReader.Value;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            break;
+                                        }
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(name))
+                        {
+                            batch.Add(new ProducentDetail
+                            {
+                                incomId = id,
+                                Name = name,
+                                CountryCode = countryCode,
+                                Address = street,
+                                PostalCode = postalCode,
+                                City = city,
+                                Email = email,
+                                Phone = phone
+                            });
+                        }
+                        else
+                        {
+                            // Możesz wysłać informację o błędzie do klienta przez SignalR
+                            await _hubContext.Clients.Client(connectionId)
+                                .SendAsync("ProgressUpdate", 0, 0, 0, "Brak nazwy producenta.");
+                            return;
+                        }
+                    }
+
+                    processed++;
+                    if (batch.Count >= batchSize || processed == total)
+                    {
+                        _context.ProducentDetails.AddRange(batch);
+                        await _context.SaveChangesAsync();
+                        batch.Clear();
+
+                        int percent = total > 0 ? (int)((double)processed / total * 100) : 0;
+                        await _hubContext.Clients.Client(connectionId)
+                            .SendAsync("ProgressUpdate", percent, processed, total);
+                    }
+                }
+            }
+        }
     }
 }
+
+
